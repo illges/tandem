@@ -3,25 +3,18 @@
 local base = {}
 base.__index = base
 
-local TIME=1; local MIX=2; local LENGTH=3;
-local MOD_1=5; local CLOCK=6; local MOD_2=7;
-
 function base.new(args)
     local self = setmetatable({}, base)
-    self.name = args.name
-    self.channel = args.channel
-    self.cc_num_map = {14,15,16,0,17,18,19,0}
 
-    -- mood knobs
-    self.time = 64
-    self.mix = 64
-    self.length = 64
-    self.mod_1 = 64
-    self.clock = 64
-    self.mod_2 = 64
+    -- pedal knobs
+    self.knob_1 = 64
+    self.knob_2 = 64
+    self.knob_3 = 64
+    self.knob_4 = 64
+    self.knob_5 = 64
+    self.knob_6 = 64
 
     self.dm = args.dm
-    self:add_params()
     return self
 end
 
@@ -36,104 +29,110 @@ function base:add_params()
         action = function(x) self.channel = x end
     }
     params:add{
-        type = "number", id = (self.name.."_time"),
-        name = ("time"),
+        type = "number", id = (self.name.."_knob_1"),
+        name = (self.name_knob_map[1]),
         min = 0, max = 127,
-        default = self.time,
+        default = self.knob_1,
         action = function(x)
-            self.time = x
-            self.dm:device_out():cc(self.cc_num_map[TIME], x, self.channel)
+            self.knob_1 = x
+            self.dm:device_out():cc(self.cc_knob_map[1], x, self.channel)
         end
     }
     params:add{
-        type = "number", id = (self.name.."_mix"),
-        name = ("mix"),
+        type = "number", id = (self.name.."_knob_2"),
+        name = (self.name_knob_map[2]),
         min = 0, max = 127,
-        default = self.mix,
+        default = self.knob_2,
         action = function(x)
-            self.mix = x
-            self.dm:device_out():cc(self.cc_num_map[MIX], x, self.channel)
+            self.knob_2 = x
+            self.dm:device_out():cc(self.cc_knob_map[2], x, self.channel)
         end
     }
     params:add{
-        type = "number", id = (self.name.."_length"),
-        name = ("length"),
+        type = "number", id = (self.name.."_knob_3"),
+        name = (self.name_knob_map[3]),
         min = 0, max = 127,
-        default = self.length,
+        default = self.knob_3,
         action = function(x)
-            self.length = x
-            self.dm:device_out():cc(self.cc_num_map[LENGTH], x, self.channel)
+            self.knob_3 = x
+            self.dm:device_out():cc(self.cc_knob_map[3], x, self.channel)
         end
     }
     params:add{
-        type = "number", id = (self.name.."_mod_1"),
-        name = ("mod_1"),
+        type = "number", id = (self.name.."_knob_4"),
+        name = (self.name_knob_map[4]),
         min = 0, max = 127,
-        default = self.mod_1,
+        default = self.knob_4,
         action = function(x)
-            self.mod_1 = x
-            self.dm:device_out():cc(self.cc_num_map[MOD_1], x, self.channel)
+            self.knob_4 = x
+            self.dm:device_out():cc(self.cc_knob_map[4], x, self.channel)
         end
     }
     params:add{
-        type = "number", id = (self.name.."_clock"),
-        name = ("clock"),
+        type = "number", id = (self.name.."_knob_5"),
+        name = (self.name_knob_map[5]),
         min = 0, max = 127,
-        default = self.clock,
+        default = self.knob_5,
         action = function(x)
-            self.clock = x
-            self.dm:device_out():cc(self.cc_num_map[CLOCK], x, self.channel)
+            self.knob_5 = x
+            self.dm:device_out():cc(self.cc_knob_map[5], x, self.channel)
         end
     }
     params:add{
-        type = "number", id = (self.name.."_mod_2"),
-        name = ("mod_2"),
+        type = "number", id = (self.name.."_knob_6"),
+        name = (self.name_knob_map[6]),
         min = 0, max = 127,
-        default = self.mod_2,
+        default = self.knob_6,
         action = function(x)
-            self.mod_2 = x
-            self.dm:device_out():cc(self.cc_num_map[MOD_2], x, self.channel)
+            self.knob_6 = x
+            self.dm:device_out():cc(self.cc_knob_map[6], x, self.channel)
         end
     }
 end
 
 function base:delta(n,d)
-    if n==1 then return self:delta_time(d)
-    elseif n==2 then return self:delta_mix(d)
-    elseif n==3 then return self:delta_length(d)
-    elseif n==5 then return self:delta_mod_1(d)
-    elseif n==6 then return self:delta_clock(d)
-    elseif n==7 then return self:delta_mod_2(d)
+    if n==self.mft_knob_map[1] then return self:delta_knob_1(d)
+    elseif n==self.mft_knob_map[2] then return self:delta_knob_2(d)
+    elseif n==self.mft_knob_map[3] then return self:delta_knob_3(d)
+    elseif n==self.mft_knob_map[4] then return self:delta_knob_4(d)
+    elseif n==self.mft_knob_map[5] then return self:delta_knob_5(d)
+    elseif n==self.mft_knob_map[6] then return self:delta_knob_6(d)
     end
 end
 
-function base:delta_time(d)
-    params:delta(self.name.."_time", d)
-    return self.time
+function base:delta_knob_1(d)
+    set_message(self.name.." "..self.name_knob_map[1].." turning "..d)
+    params:delta(self.name.."_knob_1", d)
+    return self.knob_1
 end
 
-function base:delta_mix(d)
-    params:delta(self.name.."_mix", d)
-    return self.mix
+function base:delta_knob_2(d)
+    set_message(self.name.." "..self.name_knob_map[2].." turning "..d)
+    params:delta(self.name.."_knob_2", d)
+    return self.knob_2
 end
 
-function base:delta_length(d)
-    params:delta(self.name.."_length", d)
-    return self.length
+function base:delta_knob_3(d)
+    set_message(self.name.." "..self.name_knob_map[3].." turning "..d)
+    params:delta(self.name.."_knob_3", d)
+    return self.knob_3
 end
 
-function base:delta_mod_1(d)
-    params:delta(self.name.."_mod_1", d)
-    return self.mod_1
+function base:delta_knob_4(d)
+    set_message(self.name.." "..self.name_knob_map[4].." turning "..d)
+    params:delta(self.name.."_knob_4", d)
+    return self.knob_4
 end
 
-function base:delta_clock(d)
-    params:delta(self.name.."_clock", d)
-    return self.clock
+function base:delta_knob_5(d)
+    set_message(self.name.." "..self.name_knob_map[5].." turning "..d)
+    params:delta(self.name.."_knob_5", d)
+    return self.knob_5
 end
-function base:delta_mod_2(d)
-    params:delta(self.name.."_mod_2", d)
-    return self.mod_2
+function base:delta_knob_6(d)
+    set_message(self.name.." "..self.name_knob_map[6].." turning "..d)
+    params:delta(self.name.."_knob_6", d)
+    return self.knob_6
 end
 
 return base

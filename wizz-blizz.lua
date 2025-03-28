@@ -6,6 +6,7 @@ SCRIPT_NAME = "wizz-blizz"
 local _grid = include 'lib/_grid'
 local _pedal = include 'lib/pedal'
 local _blooper = include 'lib/blooper'
+local _mood = include 'lib/mood'
 local _dm = include 'device_manager/lib/_device_manager' -- install from https://github.com/illges/device_manager
 local _pacifist = include 'pacifist_dev/lib/_pacifist' -- install from https://github.com/illges/pacifist_dev
 
@@ -16,11 +17,11 @@ message_count = 0
 function init()
     message = SCRIPT_NAME
     dm = _dm.new({adv=false, debug=false})
-    mood=_pedal.new({name="mood", channel=2, dm=dm})
-    blooper=_blooper.new({name="blooper", channel=3, dm=dm})
+    mood=_mood.new({dm=dm})
+    blooper=_blooper.new({dm=dm})
     mft = _pacifist:new({
-        devices=dm.devices, debug=false, colors={75,75,75,0,75,75,75,0,0,18,18,18,0,18,18,18},
-        ind={mood.time,mood.mix,mood.length,0,mood.mod_1,mood.clock,mood.mod_2,0,0,64,64,64,0,64,64,64}
+        devices=dm.devices, debug=false, colors={mood.color,mood.color,mood.color,0,mood.color,mood.color,mood.color,0,0,blooper.color,blooper.color,blooper.color,0,blooper.color,blooper.color,blooper.color},
+        ind={mood.knob_1,mood.knob_2,mood.knob_3,0,mood.knob_4,mood.knob_5,mood.knob_6,0,0,blooper.knob_1,blooper.knob_2,blooper.knob_3,0,blooper.knob_4,blooper.knob_5,blooper.knob_6}
     })
     g=_grid:new()
 
@@ -28,10 +29,6 @@ function init()
     grid_dirty = true
     screen_redraw_clock()
     grid_redraw_clock()
-end
-
-function init_mft()
-    
 end
 
 function screen_redraw_clock()
@@ -121,15 +118,14 @@ function redraw_mft()
 end
 
 function mft_enc(n,d)
-    set_message("mft enc "..n.." turned "..d)
     mft.last_turned = n
     mft.enc_activity_count = 15
     mft.activity_count = 15
+    --mft:delta_color(n,d)
     if (n>=1 and n<=3) or (n>=5 and n<=7) then
         mft.ind[n] = mood:delta(n,d)
     elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
         mft.ind[n] = blooper:delta(n,d)
-        --mft:delta_color(n,d)
     end
     screen_dirty = true
     grid_dirty=true
