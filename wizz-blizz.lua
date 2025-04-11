@@ -9,6 +9,7 @@ local _blooper = include 'lib/blooper'
 local _mood = include 'lib/mood'
 local _dm = include 'device_manager/lib/_device_manager' -- install from https://github.com/illges/device_manager
 local _pacifist = include 'pacifist_dev/lib/_pacifist' -- install from https://github.com/illges/pacifist_dev
+_lfos = require 'lfo'
 
 engine.name = 'PolyPerc'
 
@@ -24,6 +25,22 @@ function init()
         ind={mood.knob_1,mood.knob_2,mood.knob_3,0,mood.knob_4,mood.knob_5,mood.knob_6,0,0,blooper.knob_1,blooper.knob_2,blooper.knob_3,0,blooper.knob_4,blooper.knob_5,blooper.knob_6}
     })
     g=_grid:new()
+
+    cutoff_lfo = _lfos:add{
+        shape = 'sine', -- shape
+        min = 0, -- min
+        max = 128, -- max
+        depth = 1, -- depth (0 to 1)
+        mode = 'clocked', -- mode
+        period = 4, -- period (in 'clocked' mode, represents beats)
+        -- pass our 'scaled' value (bounded by min/max and depth) to the engine:
+        action = function(scaled, raw)
+            --print(scaled.." : "..raw)
+            mood:set_knob(1,math.floor(scaled+0.5))
+            grid_dirty = true
+        end -- action, always passes scaled and raw values
+    }
+    cutoff_lfo:start() -- start our LFO, complements ':stop()'
 
     screen_dirty = true
     grid_dirty = true

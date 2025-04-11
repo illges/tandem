@@ -135,4 +135,10 @@ function base:delta_knob_6(d)
     return self.knob_6
 end
 
+function base:set_knob(n, val)
+    --set_message(self.name.." "..self.name_knob_map[1].." turning "..d)
+    params:set(self.name.."_knob_"..n, val)
+    mft.ind[n] = val
+end
+
 return base
