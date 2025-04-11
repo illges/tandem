@@ -6,6 +6,7 @@ local pedal = setmetatable({}, {__index = base})
 pedal.__index = pedal
 
 function pedal.new(args)
+    args.name = "blooper"
     local self = setmetatable(base.new(args), pedal)
     self.name = "blooper"
     self.color = 18 -- blue

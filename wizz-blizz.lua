@@ -4,12 +4,10 @@
 
 SCRIPT_NAME = "wizz-blizz"
 local _grid = include 'lib/_grid'
-local _pedal = include 'lib/pedal'
 local _blooper = include 'lib/blooper'
 local _mood = include 'lib/mood'
 local _dm = include 'device_manager/lib/_device_manager' -- install from https://github.com/illges/device_manager
 local _pacifist = include 'pacifist_dev/lib/_pacifist' -- install from https://github.com/illges/pacifist_dev
-_lfos = require 'lfo'
 
 engine.name = 'PolyPerc'
 
@@ -25,22 +23,6 @@ function init()
         ind={mood.knob_1,mood.knob_2,mood.knob_3,0,mood.knob_4,mood.knob_5,mood.knob_6,0,0,blooper.knob_1,blooper.knob_2,blooper.knob_3,0,blooper.knob_4,blooper.knob_5,blooper.knob_6}
     })
     g=_grid:new()
-
-    cutoff_lfo = _lfos:add{
-        shape = 'sine', -- shape
-        min = 0, -- min
-        max = 128, -- max
-        depth = 1, -- depth (0 to 1)
-        mode = 'clocked', -- mode
-        period = 4, -- period (in 'clocked' mode, represents beats)
-        -- pass our 'scaled' value (bounded by min/max and depth) to the engine:
-        action = function(scaled, raw)
-            --print(scaled.." : "..raw)
-            mood:set_knob(1,math.floor(scaled+0.5))
-            grid_dirty = true
-        end -- action, always passes scaled and raw values
-    }
-    cutoff_lfo:start() -- start our LFO, complements ':stop()'
 
     screen_dirty = true
     grid_dirty = true
@@ -140,9 +122,9 @@ function mft_enc(n,d)
     mft.activity_count = 15
     --mft:delta_color(n,d)
     if (n>=1 and n<=3) or (n>=5 and n<=7) then
-        mft.ind[n] = mood:delta(n,d)
+        mood:delta_knob(n,d)
     elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-        mft.ind[n] = blooper:delta(n,d)
+        blooper:delta_knob(n,d)
     end
     screen_dirty = true
     grid_dirty=true
@@ -156,12 +138,10 @@ function mft_key(n,z)
         mft.last_pressed = n
         mft.key_activity_count = 15
         mft.activity_count = 15
-        if n>=1 and n<=4 then
-            --mft:set_color(n,64)
-        elseif n>=5 and n<=8 then
-            --mft:toggle_color(n,1,64)
-        elseif n>=9 and n<=16 then
-            --mft:delta_color(n,10)
+        if (n>=1 and n<=3) or (n>=5 and n<=7) then
+            mood:toggle_lfo(n)
+        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
+            blooper:toggle_lfo(n)
         elseif n==17 then
         elseif n==18 then
         elseif n==19 then
