@@ -20,7 +20,7 @@ function init()
     blooper=_blooper.new({dm=dm})
     mft = _pacifist:new({
         devices=dm.devices, debug=false, colors={mood.color,mood.color,mood.color,0,mood.color,mood.color,mood.color,0,0,blooper.color,blooper.color,blooper.color,0,blooper.color,blooper.color,blooper.color},
-        ind={mood.knob_1,mood.knob_2,mood.knob_3,0,mood.knob_4,mood.knob_5,mood.knob_6,0,0,blooper.knob_1,blooper.knob_2,blooper.knob_3,0,blooper.knob_4,blooper.knob_5,blooper.knob_6}
+        ind={mood.knobs[1],mood.knobs[2],mood.knobs[3],0,mood.knobs[4],mood.knobs[5],mood.knobs[6],0,0,blooper.knobs[1],blooper.knobs[2],blooper.knobs[3],0,blooper.knobs[4],blooper.knobs[5],blooper.knobs[6]}
     })
     g=_grid:new()
 

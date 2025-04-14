@@ -16,6 +16,7 @@ function pedal.new(args)
     self.mft_knob_map = {10,11,12,14,15,16}
 
     self:add_params()
+    self:init_lfos()
     return self
 end
 
