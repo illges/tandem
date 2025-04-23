@@ -7,14 +7,22 @@ base.__index = base
 function base.new(args)
     local self = setmetatable({}, base)
     self.name = args.name
+    self.message = ""
+    self.mode = "LFO"
     self.knobs = {64,64,64,64,64,64}
     self.dm = args.dm
     self.lfos = {}
     return self
 end
 
+function base:set_message(msg, count)
+    self.message = msg
+    message_count = count and count or 8
+    screen_dirty = true
+end
+
 function base:add_params()
-    params:add_group(self.name, 7)
+    params:add_group(self.name, 8)
     --params:add_separator(self.name)
     params:add{
         type = "number", id = (self.name.."_channel"),
@@ -22,6 +30,13 @@ function base:add_params()
         min = 1, max = 16,
         default = self.channel,
         action = function(x) self.channel = x end
+    }
+    params:add{
+        type = "number", id = (self.name.."_mode"),
+        name = ("mode"),
+        min = 1, max = 16,
+        default = 1,
+        action = function(x) self.mode = self.mode=="LFO" and "PAT" or "LFO" end
     }
     for i=1,6 do
         params:add_control(self.name.."_knob_"..i,self.name_knob_map[i],controlspec.MIDI)
@@ -31,6 +46,10 @@ function base:add_params()
             self.dm:device_out():cc(self.cc_knob_map[i], x, self.channel)
         end)
     end
+end
+
+function base:delta_mode()
+    params:delta(self.name.."_mode",1)
 end
 
 function base:delta_knob(n,d)
@@ -44,7 +63,7 @@ end
 
 function base:delta(n, d)
     params:delta(self.name.."_knob_"..n, d)
-    set_message(self.name.." "..self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
+    self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
 function base:init_lfos()
@@ -96,7 +115,7 @@ end
 
 function base:delta_lfo_depth(n, d)
     local val = util.clamp(self.lfos[n]:get("depth") + (d*0.025), 0, 1)
-    set_message(self.name.." lfo depth "..self.name_knob_map[n].." "..val)
+    self:set_message("lfo depth "..self.name_knob_map[n].." "..val)
     self.lfos[n]:set("depth", val)
 end
 

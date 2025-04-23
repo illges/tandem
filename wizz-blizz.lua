@@ -38,7 +38,8 @@ function screen_redraw_clock()
         if message_count>0 then
             message_count=message_count-1
         else
-            message = SCRIPT_NAME
+            mood.message = ""
+            blooper.message = ""
             screen_dirty = true
         end
         if screen_dirty == true then
@@ -78,7 +79,7 @@ function enc(e, d)
 end
 
 function turn(e, d)
-    set_message("encoder " .. e .. ", delta " .. d)
+    --set_message("encoder " .. e .. ", delta " .. d)
 end
 
 function key(k, z)
@@ -89,7 +90,7 @@ function key(k, z)
 end
 
 function press_down(i)
-    set_message("press down " .. i)
+    --set_message("press down " .. i)
 end
 
 function redraw()
@@ -98,12 +99,20 @@ function redraw()
     screen.font_face(1)
     screen.font_size(8)
     screen.level(15)
-    screen.move(64, 32)
-    screen.text_center(message)
-    screen.pixel(0, 0)
-    screen.pixel(127, 0)
-    screen.pixel(127, 63)
-    screen.pixel(0, 63)
+    screen.move(0, 32)
+    screen.line(127,32)
+    screen.stroke()
+
+    screen.move(0, 5)
+    screen.text(mood.name.."-".. mood.mode )
+    screen.move(0, 15)
+    screen.text(mood.message)
+
+    screen.move(127, 62)
+    screen.text_right(blooper.mode.."-"..blooper.name)
+    screen.move(127, 52)
+    screen.text_right(blooper.message)
+
     screen.fill()
     screen.update()
 end
@@ -134,7 +143,7 @@ function mft_key(n,z)
     local on = z==1
     mft.momentary[n] = on and 1 or 0
     if on then
-        set_message("mft key "..n.." pressed")
+        --set_message("mft key "..n.." pressed")
         mft.last_pressed = n
         mft.key_activity_count = 15
         mft.activity_count = 15
@@ -143,17 +152,21 @@ function mft_key(n,z)
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
             blooper:toggle_lfo(n)
         elseif n==17 then
+            mood:delta_mode()
         elseif n==18 then
         elseif n==19 then
             dm:device_out():program_change(1, mood.channel)
         elseif n==20 then
+            blooper:delta_mode()
         elseif n==21 then
         elseif n==22 then
             dm:device_out():program_change(1, blooper.channel)
         end
     else
-        if n>=1 and n<=4 then
-            --mft:toggle_color(n,1)
+        if (n>=1 and n<=3) or (n>=5 and n<=7) then
+            
+        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
+
         end
     end
     screen_dirty = true
@@ -161,7 +174,7 @@ function mft_key(n,z)
 end
 
 function midi_event_note_on(d)
-    set_message(d.note)
+    --set_message(d.note)
 end
 
 function midi_event_note_off(d) end
