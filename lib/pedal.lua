@@ -72,10 +72,6 @@ function base:set(n, val)
     self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
-function base:get_knob_val(n)
-    return params:get(self.name.."_knob_"..n)
-end
-
 function base:init_lfos()
     params:add_group(self.name..' LFOs',90)
     for i=1,6 do
