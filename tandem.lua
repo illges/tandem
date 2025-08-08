@@ -1,8 +1,8 @@
--- some wizz blizz
+-- control fx pedals in tandem
 
 ---@diagnostic disable: undefined-global, lowercase-global, duplicate-set-field
 
-SCRIPT_NAME = "wizz-blizz"
+SCRIPT_NAME = "tandem"
 local _grid = include 'lib/_grid'
 local _blooper = include 'lib/blooper'
 local _mood = include 'lib/mood'
