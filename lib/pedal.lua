@@ -10,6 +10,7 @@ function base.new(args)
     self.message = ""
     self.mode = "LFO"
     self.knobs = {64,64,64,64,64,64}
+    self.knob_lfo_vals = {}
     self.dm = args.dm
     self.lfos = {}
     return self
@@ -55,7 +56,7 @@ end
 function base:delta_knob(n,d)
     for i=1,6 do
         if n==self.mft_knob_map[i] then
-            if self.lfos[i]:get('enabled') == 1 then self:delta_lfo_depth(i, d) else self:delta(i, d) end
+            if self:lfo_is_enabled(i) then self:delta_lfo_depth(i, d) else self:delta(i, d) end
             return
         end
     end
@@ -66,6 +67,15 @@ function base:delta(n, d)
     self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
+function base:set(n, val)
+    params:set(self.name.."_knob_"..n, val)
+    self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
+end
+
+function base:get_knob_val(n)
+    return params:get(self.name.."_knob_"..n)
+end
+
 function base:init_lfos()
     params:add_group(self.name..' LFOs',90)
     for i=1,6 do
@@ -74,14 +84,18 @@ function base:init_lfos()
             shape = 'sine',
             min = -1,
             max = 1,
-            depth = 0.2, -- depth (0 to 1)
+            depth = 0.5, -- depth (0 to 1)
             mode = 'clocked',
             period = 4, -- (in 'clocked' mode, represents beats)
             baseline = 'center',
             --reset_target = 'mid: falling',
             action = function(scaled, raw)
-                params:lookup_param(self.name.."_knob_"..i).action(self:calculate_bipolar_lfo_movement(self.lfos[i], self.name.."_knob_"..i))
+                local val = self:calculate_bipolar_lfo_movement(self.lfos[i], self.name.."_knob_"..i)
+                --print(val)
+                self.knob_lfo_vals[i] = val
+                params:lookup_param(self.name.."_knob_"..i).action(val)
                 grid_dirty = true
+                screen_dirty = true
             end -- action, always passes scaled and raw values
         }
         self.lfos[i]:add_params(self.name..'_lfo_'..i, 'lfo '..i)
@@ -93,7 +107,6 @@ end
 
 function base:calculate_bipolar_lfo_movement(lfoID, paramID)
     if lfoID:get('depth') > 0 then
-        --print(params:lookup_param(paramID).controlspec:map(lfoID:get('scaled')/2 + params:get_raw(paramID)))
         return params:lookup_param(paramID).controlspec:map(lfoID:get('scaled')/2 + params:get_raw(paramID))
     else
         return params:lookup_param(paramID).controlspec:map(params:get_raw(paramID))
@@ -117,6 +130,10 @@ function base:delta_lfo_depth(n, d)
     local val = util.clamp(self.lfos[n]:get("depth") + (d*0.025), 0, 1)
     self:set_message("lfo depth "..self.name_knob_map[n].." "..val)
     self.lfos[n]:set("depth", val)
+end
+
+function base:lfo_is_enabled(n)
+    return self.lfos[n]:get('enabled') == 1
 end
 
 return base

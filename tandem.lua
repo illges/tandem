@@ -16,11 +16,11 @@ message_count = 0
 function init()
     message = SCRIPT_NAME
     dm = _dm.new({adv=false, debug=false})
-    mood=_mood.new({dm=dm})
-    blooper=_blooper.new({dm=dm})
+    pedal1=_mood.new({dm=dm})
+    pedal2=_blooper.new({dm=dm})
     mft = _pacifist:new({
-        devices=dm.devices, debug=false, colors={mood.color,mood.color,mood.color,0,mood.color,mood.color,mood.color,0,0,blooper.color,blooper.color,blooper.color,0,blooper.color,blooper.color,blooper.color},
-        ind={mood.knobs[1],mood.knobs[2],mood.knobs[3],0,mood.knobs[4],mood.knobs[5],mood.knobs[6],0,0,blooper.knobs[1],blooper.knobs[2],blooper.knobs[3],0,blooper.knobs[4],blooper.knobs[5],blooper.knobs[6]}
+        devices=dm.devices, debug=false, colors={pedal1.color,pedal1.color,pedal1.color,0,pedal1.color,pedal1.color,pedal1.color,0,0,pedal2.color,pedal2.color,pedal2.color,0,pedal2.color,pedal2.color,pedal2.color},
+        ind={pedal1.knobs[1],pedal1.knobs[2],pedal1.knobs[3],0,pedal1.knobs[4],pedal1.knobs[5],pedal1.knobs[6],0,0,pedal2.knobs[1],pedal2.knobs[2],pedal2.knobs[3],0,pedal2.knobs[4],pedal2.knobs[5],pedal2.knobs[6]}
     })
     g=_grid:new()
 
@@ -38,9 +38,9 @@ function screen_redraw_clock()
         if message_count>0 then
             message_count=message_count-1
         else
-            mood.message = ""
-            blooper.message = ""
-            screen_dirty = true
+            -- pedal1.message = ""
+            -- pedal2.message = ""
+            -- screen_dirty = true
         end
         if screen_dirty == true then
             redraw()
@@ -94,27 +94,44 @@ function press_down(i)
 end
 
 function redraw()
+    local mode_feedback = ""
     screen.clear()
     screen.aa(1)
     screen.font_face(1)
     screen.font_size(8)
     screen.level(15)
+
+    -- split screen
     screen.move(0, 32)
     screen.line(127,32)
     screen.stroke()
 
+    screen.level(15)
     screen.move(0, 5)
-    screen.text(mood.name.."-".. mood.mode )
-    screen.move(0, 15)
-    screen.text(mood.message)
+    screen.text(pedal1.name.."-".. pedal1.mode )
+    draw_pedal(pedal1)
 
+    screen.level(15)
     screen.move(127, 62)
-    screen.text_right(blooper.mode.."-"..blooper.name)
-    screen.move(127, 52)
-    screen.text_right(blooper.message)
+    screen.text_right(pedal2.mode.."-"..pedal2.name)
+    draw_pedal(pedal2)
 
     screen.fill()
     screen.update()
+end
+
+function draw_pedal(pedal)
+    local mode_feedback = ""
+    for i=1,6 do
+        screen.level(mft:active_turned(pedal.mft_knob_map[i]) and 10 or 4)
+        mode_feedback = pedal:lfo_is_enabled(i) and "^" or ""
+        screen.move(pedal.display_x_map[i], pedal.display_y_map[i])
+        screen.text(pedal.short_names_map[i]..mode_feedback)
+
+        screen.level(2)
+        screen.move(pedal.display_x_map[i] + pedal.display_x_offset_map[i], pedal.display_y_map[i])
+        screen.text(pedal:lfo_is_enabled(i) and pedal.knob_lfo_vals[i] or pedal.knobs[i])
+    end
 end
 
 function redraw_mft()
@@ -126,14 +143,18 @@ function redraw_mft()
 end
 
 function mft_enc(n,d)
-    mft.last_turned = n
-    mft.enc_activity_count = 15
-    mft.activity_count = 15
+    mft:track_turned(n,15,15)
     --mft:delta_color(n,d)
-    if (n>=1 and n<=3) or (n>=5 and n<=7) then
-        mood:delta_knob(n,d)
-    elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-        blooper:delta_knob(n,d)
+    if mft.momentary[n] == 1 then -- knob is pressed
+        mft.turned_while_pressed[n] = 1
+        -- if lfo on then update real val
+        -- else update real value on release
+    else
+        if (n>=1 and n<=3) or (n>=5 and n<=7) then
+            pedal1:delta_knob(n,d)
+        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
+            pedal2:delta_knob(n,d)
+        end
     end
     screen_dirty = true
     grid_dirty=true
@@ -143,31 +164,39 @@ function mft_key(n,z)
     local on = z==1
     mft.momentary[n] = on and 1 or 0
     if on then
-        --set_message("mft key "..n.." pressed")
-        mft.last_pressed = n
-        mft.key_activity_count = 15
-        mft.activity_count = 15
-        if (n>=1 and n<=3) or (n>=5 and n<=7) then
-            mood:toggle_lfo(n)
-        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-            blooper:toggle_lfo(n)
-        elseif n==17 then
-            mood:delta_mode()
-        elseif n==18 then
-        elseif n==19 then
-            dm:device_out():program_change(1, mood.channel)
-        elseif n==20 then
-            blooper:delta_mode()
-        elseif n==21 then
-        elseif n==22 then
-            dm:device_out():program_change(1, blooper.channel)
-        end
-    else
+        mft:track_pressed(n,15,15)
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
             
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-
+            
+        elseif n==17 then
+            pedal1:delta_mode()
+        elseif n==18 then
+        elseif n==19 then
+            dm:device_out():program_change(1, pedal1.channel)
+        elseif n==20 then
+            pedal2:delta_mode()
+        elseif n==21 then
+        elseif n==22 then
+            dm:device_out():program_change(1, pedal2.channel)
         end
+    else
+        if (n>=1 and n<=3) or (n>=5 and n<=7) then
+            if mft.turned_while_pressed[n] == 0 then
+                pedal1:toggle_lfo(n)
+            end
+        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
+            if mft.turned_while_pressed[n] == 0 then
+                pedal2:toggle_lfo(n)
+            end
+        elseif 17 then
+        elseif 18 then
+        elseif 19 then
+        elseif 20 then
+        elseif 21 then
+        elseif 22 then
+        end
+        mft.turned_while_pressed[n] = 0
     end
     screen_dirty = true
     grid_dirty=true
