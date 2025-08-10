@@ -10,6 +10,7 @@ function base.new(args)
     self.message = ""
     self.mode = "LFO"
     self.knobs = {64,64,64,64,64,64}
+    self.knobs_silent_val = {64,64,64,64,64,64}
     self.knob_lfo_vals = {}
     self.dm = args.dm
     self.lfos = {}
@@ -17,9 +18,13 @@ function base.new(args)
 end
 
 function base:set_message(msg, count)
-    self.message = msg
+    self.message = ": "..msg
     message_count = count and count or 8
     screen_dirty = true
+end
+
+function base:get_mft_knob_num(n)
+    return self.mft_knob_map[n]
 end
 
 function base:add_params()
@@ -53,10 +58,14 @@ function base:delta_mode()
     params:delta(self.name.."_mode",1)
 end
 
-function base:delta_knob(n,d)
+function base:delta_knob(n,d,pressed)
     for i=1,6 do
         if n==self.mft_knob_map[i] then
-            if self:lfo_is_enabled(i) then self:delta_lfo_depth(i, d) else self:delta(i, d) end
+            if pressed then
+                if self:lfo_is_enabled(i) then self:delta_lfo_depth(i,d) else self:delta_silent_value(i,d) end
+            else
+                self:delta(i,d)
+            end
             return
         end
     end
@@ -64,12 +73,40 @@ end
 
 function base:delta(n, d)
     params:delta(self.name.."_knob_"..n, d)
-    self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
+    self:set_message("delta")
+end
+
+function base:delta_silent_value(n,d)
+    self.knobs_silent_val[n] = util.clamp(
+        self.knobs_silent_val[n] + d,
+        params:get_range(self.name.."_knob_"..n)[1],
+        params:get_range(self.name.."_knob_"..n)[2]
+    )
+    mft.ind[self.mft_knob_map[n]] = self.knobs_silent_val[n]
+    self:set_message("silent delta")
+end
+
+function base:reset_silent(n)
+    for i=1,6 do
+        if n==self.mft_knob_map[i] then
+            self.knobs_silent_val[n] = self.knobs[n]
+            return
+        end
+    end
+end
+
+function base:set_using_silent(n)
+    for i=1,6 do
+        if n==self.mft_knob_map[i] then
+            self:set(i,self.knobs_silent_val[i])
+            return
+        end
+    end
 end
 
 function base:set(n, val)
     params:set(self.name.."_knob_"..n, val)
-    self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
+    --self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
 function base:init_lfos()
@@ -124,7 +161,7 @@ end
 
 function base:delta_lfo_depth(n, d)
     local val = util.clamp(self.lfos[n]:get("depth") + (d*0.025), 0, 1)
-    self:set_message("lfo depth "..self.name_knob_map[n].." "..val)
+    self:set_message("lfo depth "..val)
     self.lfos[n]:set("depth", val)
 end
 

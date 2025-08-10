@@ -35,12 +35,13 @@ function screen_redraw_clock()
     screen_drawing.time=0.1
     screen_drawing.count=-1
     screen_drawing.event=function()
-        if message_count>0 then
+        if message_count==1 then
             message_count=message_count-1
-        else
-            -- pedal1.message = ""
-            -- pedal2.message = ""
-            -- screen_dirty = true
+            pedal1.message = ""
+            pedal2.message = ""
+            screen_dirty = true
+        elseif message_count>0 then
+            message_count=message_count-1
         end
         if screen_dirty == true then
             redraw()
@@ -94,7 +95,6 @@ function press_down(i)
 end
 
 function redraw()
-    local mode_feedback = ""
     screen.clear()
     screen.aa(1)
     screen.font_face(1)
@@ -108,12 +108,12 @@ function redraw()
 
     screen.level(15)
     screen.move(0, 5)
-    screen.text(pedal1.name.."-".. pedal1.mode )
+    screen.text(pedal1.name.."-".. pedal1.mode..pedal1.message)
     draw_pedal(pedal1)
 
     screen.level(15)
     screen.move(127, 62)
-    screen.text_right(pedal2.mode.."-"..pedal2.name)
+    screen.text_right(pedal2.name.."-"..pedal2.mode..pedal2.message)
     draw_pedal(pedal2)
 
     screen.fill()
@@ -130,7 +130,15 @@ function draw_pedal(pedal)
 
         screen.level(2)
         screen.move(pedal.display_x_map[i] + pedal.display_x_offset_map[i], pedal.display_y_map[i])
-        screen.text(pedal:lfo_is_enabled(i) and pedal.knob_lfo_vals[i] or pedal.knobs[i])
+        if pedal:lfo_is_enabled(i) then
+            screen.text(pedal.knob_lfo_vals[i])
+        else
+            if mft.momentary[pedal:get_mft_knob_num(i)] == 1 then
+                screen.text(pedal.knobs_silent_val[i])
+            else
+                screen.text(pedal.knobs[i])
+            end
+        end
     end
 end
 
@@ -144,17 +152,14 @@ end
 
 function mft_enc(n,d)
     mft:track_turned(n,15,15)
-    --mft:delta_color(n,d)
-    if mft.momentary[n] == 1 then -- knob is pressed
+    local pressed = mft.momentary[n] == 1
+    if pressed then
         mft.turned_while_pressed[n] = 1
-        -- if lfo on then update real val
-        -- else update real value on release
-    else
-        if (n>=1 and n<=3) or (n>=5 and n<=7) then
-            pedal1:delta_knob(n,d)
-        elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-            pedal2:delta_knob(n,d)
-        end
+    end
+    if (n>=1 and n<=3) or (n>=5 and n<=7) then
+        pedal1:delta_knob(n, d, pressed)
+    elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
+        pedal2:delta_knob(n, d, pressed)
     end
     screen_dirty = true
     grid_dirty=true
@@ -166,9 +171,9 @@ function mft_key(n,z)
     if on then
         mft:track_pressed(n,15,15)
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
-            
+            pedal1:reset_silent(n)
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-            
+            pedal2:reset_silent(n)
         elseif n==17 then
             pedal1:delta_mode()
         elseif n==18 then
@@ -184,10 +189,14 @@ function mft_key(n,z)
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
             if mft.turned_while_pressed[n] == 0 then
                 pedal1:toggle_lfo(n)
+            else
+                pedal1:set_using_silent(n)
             end
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
             if mft.turned_while_pressed[n] == 0 then
                 pedal2:toggle_lfo(n)
+            else
+                pedal2:set_using_silent(n)
             end
         elseif 17 then
         elseif 18 then
