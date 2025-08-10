@@ -4,8 +4,8 @@
 
 SCRIPT_NAME = "tandem"
 local _grid = include 'lib/_grid'
-local _blooper = include 'lib/blooper'
-local _mood = include 'lib/mood'
+local _blooper = include 'lib/pedals/blooper'
+local _mood = include 'lib/pedals/mood'
 local _dm = include 'device_manager/lib/_device_manager' -- install from https://github.com/illges/device_manager
 local _pacifist = include 'pacifist_dev/lib/_pacifist' -- install from https://github.com/illges/pacifist_dev
 
@@ -19,7 +19,7 @@ function init()
     pedal1=_mood.new({dm=dm})
     pedal2=_blooper.new({dm=dm})
     mft = _pacifist:new({
-        devices=dm.devices, debug=false, colors={pedal1.color,pedal1.color,pedal1.color,0,pedal1.color,pedal1.color,pedal1.color,0,0,pedal2.color,pedal2.color,pedal2.color,0,pedal2.color,pedal2.color,pedal2.color},
+        devices=dm.devices, debug=false, colors={pedal1.color,pedal1.color,pedal1.color,0,pedal1.color,pedal1.color,pedal1.color,0,pedal2.extra_knob_1_color,pedal2.color,pedal2.color,pedal2.color,0,pedal2.color,pedal2.color,pedal2.color},
         ind={pedal1.knobs[1],pedal1.knobs[2],pedal1.knobs[3],0,pedal1.knobs[4],pedal1.knobs[5],pedal1.knobs[6],0,0,pedal2.knobs[1],pedal2.knobs[2],pedal2.knobs[3],0,pedal2.knobs[4],pedal2.knobs[5],pedal2.knobs[6]}
     })
     g=_grid:new()
@@ -172,6 +172,11 @@ function mft_key(n,z)
         mft:track_pressed(n,15,15)
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
             pedal1:reset_silent(n)
+        elseif n==8 then
+            --pedal1:extra_knob_2_press()
+        elseif n==9 then
+            pedal2:extra_knob_1_press()
+            mft.color[n] = pedal2.extra_knob_1_color
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
             pedal2:reset_silent(n)
         elseif n==17 then
@@ -207,6 +212,14 @@ function mft_key(n,z)
         end
         mft.turned_while_pressed[n] = 0
     end
+    screen_dirty = true
+    grid_dirty=true
+end
+
+function execute_threshold_trigger()
+    dm:device_out():cc(pedal2.extra_knob_cc, 127, pedal2.channel)
+    pedal2.extra_knob_1_color = pedal2.extra_knob_1_color_options[1]
+    mft.color[9] = pedal2.extra_knob_1_color
     screen_dirty = true
     grid_dirty=true
 end
