@@ -108,12 +108,12 @@ function redraw()
 
     screen.level(15)
     screen.move(0, 5)
-    screen.text(pedal1.name.."-".. pedal1.mode..pedal1.message)
+    screen.text(pedal1.name.."-"..pedal1.modes[params:get(pedal1.name.."_mode")]..pedal1.message)
     draw_pedal(pedal1)
 
     screen.level(15)
     screen.move(127, 62)
-    screen.text_right(pedal2.name.."-"..pedal2.mode..pedal2.message)
+    screen.text_right(pedal2.name.."-"..pedal2.modes[params:get(pedal2.name.."_mode")]..pedal2.message)
     draw_pedal(pedal2)
 
     screen.fill()
@@ -193,13 +193,13 @@ function mft_key(n,z)
     else
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
             if mft.turned_while_pressed[n] == 0 then
-                pedal1:toggle_lfo(n)
+                pedal1:toggle_modulation(n)
             else
                 pedal1:set_using_silent(n)
             end
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
             if mft.turned_while_pressed[n] == 0 then
-                pedal2:toggle_lfo(n)
+                pedal2:toggle_modulation(n)
             else
                 pedal2:set_using_silent(n)
             end

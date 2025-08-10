@@ -8,7 +8,8 @@ function base.new(args)
     local self = setmetatable({}, base)
     self.name = args.name
     self.message = ""
-    self.mode = "LFO"
+    self.modes = {"LFO","PAT"}
+    self.mode_selection = 1
     self.knobs = {64,64,64,64,64,64}
     self.knobs_silent_val = {64,64,64,64,64,64}
     self.knob_lfo_vals = {}
@@ -37,13 +38,10 @@ function base:add_params()
         default = self.channel,
         action = function(x) self.channel = x end
     }
-    params:add{
-        type = "number", id = (self.name.."_mode"),
-        name = ("mode"),
-        min = 1, max = 16,
-        default = 1,
-        action = function(x) self.mode = self.mode=="LFO" and "PAT" or "LFO" end
-    }
+    params:add_option(self.name.."_mode","mode",self.modes,self.mode_selection)
+    params:set_action(self.name.."_mode", function(x)
+        self.mode_selection = x
+    end)
     for i=1,6 do
         params:add_control(self.name.."_knob_"..i,self.name_knob_map[i],controlspec.MIDI)
         params:set_action(self.name.."_knob_"..i, function(x)
@@ -55,7 +53,8 @@ function base:add_params()
 end
 
 function base:delta_mode()
-    params:delta(self.name.."_mode",1)
+    local val = util.wrap(self.mode_selection+1,1,#self.modes)
+    params:set(self.name.."_mode",val)
 end
 
 function base:delta_knob(n,d,pressed)
@@ -109,6 +108,19 @@ function base:set(n, val)
     --self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
+function base:toggle_modulation(n)
+    for i=1,6 do
+        if n==self.mft_knob_map[i] then
+            if self:lfo_is_enabled(i) == false then
+                self.lfos[i]:start()
+            else
+                self.lfos[i]:stop()
+            end
+            return
+        end
+    end
+end
+
 function base:init_lfos()
     params:add_group(self.name..' LFOs',90)
     for i=1,6 do
@@ -143,19 +155,6 @@ function base:calculate_bipolar_lfo_movement(lfoID, paramID)
         return params:lookup_param(paramID).controlspec:map(lfoID:get('scaled')/2 + params:get_raw(paramID))
     else
         return params:lookup_param(paramID).controlspec:map(params:get_raw(paramID))
-    end
-end
-
-function base:toggle_lfo(n)
-    for i=1,6 do
-        if n==self.mft_knob_map[i] then
-            if self.lfos[i]:get('enabled') == 0 then
-                self.lfos[i]:start()
-            else
-                self.lfos[i]:stop()
-            end
-            return
-        end
     end
 end
 
