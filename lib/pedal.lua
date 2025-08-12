@@ -1,21 +1,38 @@
 ---@diagnostic disable: undefined-global, lowercase-global
 
 local _lfos = require 'lfo'
+local _pattern_time  = require 'pattern_time'
 local base = {}
 base.__index = base
+
+local LFO="LFO"; PAT="PAT"
 
 function base.new(args)
     local self = setmetatable({}, base)
     self.name = args.name
     self.message = ""
     self.modes = {"LFO","PAT"}
-    self.mode_selection = 1
+    self.mode_selection = 2
     self.knobs = {64,64,64,64,64,64}
     self.knobs_silent_val = {64,64,64,64,64,64}
     self.knob_lfo_vals = {}
     self.dm = args.dm
     self.lfos = {}
+
+    self.pattern = {}
+    for i=1,6 do
+        self.pattern[i] = _pattern_time.new()
+        self.pattern[i].process = function(data)
+            self:set(data.num, data.value)
+            screen_dirty = true
+            grid_dirty = true
+        end
+    end
     return self
+end
+
+function base:record_pattern_val(n)
+    self.pattern[n]:watch({ num=n, value=self.knobs[n]})
 end
 
 function base:set_message(msg, count)
@@ -61,7 +78,14 @@ function base:delta_knob(n,d,pressed)
     for i=1,6 do
         if n==self.mft_knob_map[i] then
             if pressed then
-                if self:lfo_is_enabled(i) then self:delta_lfo_depth(i,d) else self:delta_silent_value(i,d) end
+                if self:get_mode() == LFO then
+                    if self:lfo_is_enabled(i) then self:delta_lfo_depth(i,d) else self:delta_silent_value(i,d) end
+                elseif self:get_mode() == PAT then
+                    if self.pattern[i].play == 0 and self:lfo_is_enabled(i) == false then
+                        self:delta(i,d)
+                        self:record_pattern_val(i)
+                    end
+                end
             else
                 self:delta(i,d)
             end
@@ -85,19 +109,16 @@ function base:delta_silent_value(n,d)
     self:set_message("silent delta")
 end
 
-function base:reset_silent(n)
+function base:knob_press(n)
     for i=1,6 do
         if n==self.mft_knob_map[i] then
             self.knobs_silent_val[n] = self.knobs[n]
-            return
-        end
-    end
-end
-
-function base:set_using_silent(n)
-    for i=1,6 do
-        if n==self.mft_knob_map[i] then
-            self:set(i,self.knobs_silent_val[i])
+            if self:get_mode() == PAT then
+                if self.pattern[i].play == 0 and self.pattern[i].count == 0 and self:lfo_is_enabled(i) == false then
+                    self.pattern[i]:rec_start()
+                    self:record_pattern_val(i)
+                end
+            end
             return
         end
     end
@@ -108,13 +129,56 @@ function base:set(n, val)
     --self:set_message(self.name_knob_map[n].." "..params:get(self.name.."_knob_"..n))
 end
 
+function base:get_mode()
+    return self.modes[self.mode_selection]
+end
+
+function base:get_mode_display_feedback(n)
+    if self:lfo_is_enabled(n) then
+        return "^"
+    elseif self.pattern[n].rec == 1 then
+        return "*"
+    elseif self.pattern[n].play == 1 then
+        return "+"
+    elseif self:get_mode() == PAT and self.pattern[n].count > 0 then
+        return "-"
+    end
+    return ""
+end
+
+function base:knob_release_after_turning(n)
+    for i=1,6 do
+        if self:lfo_is_enabled(i) or self.pattern[i].play == 1 then
+            return
+        elseif self:get_mode() == PAT then
+            self.pattern[i]:rec_stop()
+            self.pattern[i]:start()
+        elseif n==self.mft_knob_map[i] then
+            self:set(i,self.knobs_silent_val[i])
+            return
+        end
+    end
+end
+
 function base:toggle_modulation(n)
     for i=1,6 do
         if n==self.mft_knob_map[i] then
-            if self:lfo_is_enabled(i) == false then
-                self.lfos[i]:start()
+            if self.pattern[i].play == 0 and self:lfo_is_enabled(i) == false then
+                if self:get_mode() == LFO then
+                    self.lfos[i]:start()
+                elseif self:get_mode() == PAT and self.pattern[i].count > 0 then
+                    if self.pattern[i].rec == 1 then
+                        --print(self.pattern[i].count)
+                        self.pattern[i]:rec_stop()
+                        self.pattern[i]:start()
+                        --self.pattern[i]:clear()
+                    else
+                        self.pattern[i]:start()
+                    end
+                end
             else
                 self.lfos[i]:stop()
+                self.pattern[i]:stop()
             end
             return
         end

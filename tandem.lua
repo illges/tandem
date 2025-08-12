@@ -85,13 +85,18 @@ end
 
 function key(k, z)
     if z == 0 then return end
-    if k == 2 then press_down(2) end
-    if k == 3 then press_down(3) end
+    if k == 2 then
+    elseif k == 3 then
+        for i=1,6 do
+            pedal1.pattern[i]:rec_stop()
+            pedal1.pattern[i]:stop()
+            pedal1.pattern[i]:clear()
+            pedal2.pattern[i]:rec_stop()
+            pedal2.pattern[i]:stop()
+            pedal2.pattern[i]:clear()
+        end
+    end
     screen_dirty = true
-end
-
-function press_down(i)
-    --set_message("press down " .. i)
 end
 
 function redraw()
@@ -121,19 +126,17 @@ function redraw()
 end
 
 function draw_pedal(pedal)
-    local mode_feedback = ""
     for i=1,6 do
         screen.level(mft:active_turned(pedal.mft_knob_map[i]) and 10 or 4)
-        mode_feedback = pedal:lfo_is_enabled(i) and "^" or ""
         screen.move(pedal.display_x_map[i], pedal.display_y_map[i])
-        screen.text(pedal.short_names_map[i]..mode_feedback)
+        screen.text(pedal.short_names_map[i]..pedal:get_mode_display_feedback(i))
 
         screen.level(2)
         screen.move(pedal.display_x_map[i] + pedal.display_x_offset_map[i], pedal.display_y_map[i])
         if pedal:lfo_is_enabled(i) then
             screen.text(pedal.knob_lfo_vals[i])
         else
-            if mft.momentary[pedal:get_mft_knob_num(i)] == 1 then
+            if mft.momentary[pedal:get_mft_knob_num(i)] == 1 and pedal:get_mode() ~= "PAT" then
                 screen.text(pedal.knobs_silent_val[i])
             else
                 screen.text(pedal.knobs[i])
@@ -171,14 +174,14 @@ function mft_key(n,z)
     if on then
         mft:track_pressed(n,15,15)
         if (n>=1 and n<=3) or (n>=5 and n<=7) then
-            pedal1:reset_silent(n)
+            pedal1:knob_press(n)
         elseif n==8 then
             --pedal1:extra_knob_2_press()
         elseif n==9 then
             pedal2:extra_knob_1_press()
             mft.color[n] = pedal2.extra_knob_1_color
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
-            pedal2:reset_silent(n)
+            pedal2:knob_press(n)
         elseif n==17 then
             pedal1:delta_mode()
         elseif n==18 then
@@ -195,13 +198,13 @@ function mft_key(n,z)
             if mft.turned_while_pressed[n] == 0 then
                 pedal1:toggle_modulation(n)
             else
-                pedal1:set_using_silent(n)
+                pedal1:knob_release_after_turning(n)
             end
         elseif (n>=10 and n<=12) or (n>=14 and n<=16) then
             if mft.turned_while_pressed[n] == 0 then
                 pedal2:toggle_modulation(n)
             else
-                pedal2:set_using_silent(n)
+                pedal2:knob_release_after_turning(n)
             end
         elseif 17 then
         elseif 18 then
